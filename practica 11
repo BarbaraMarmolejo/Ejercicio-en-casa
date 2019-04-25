@@ -1,0 +1,702 @@
+//Semestre 2019 - 1
+//************************************************************//
+//************************************************************//
+//************** Alumno (s): *********************************//
+//*************		Marmolejo Fernandez Barbara			******//
+//************************************************************//
+//************************************************************//
+#include "Main.h"
+
+float transZ = -5.0f;
+float transX = 0.0f;
+float AnguloX = 0.0f;
+float AnguloY = 0.0f;
+//Para dedo 1
+float d1rotx = 0.0f;
+float d1roty = 0.0f;
+float d1rotz = 0.0f;
+//Para dedo 2
+float d2rotx = 0.0f;
+float d2roty = 0.0f;
+float d2rotz = 0.0f;
+//Para dedo 3
+float d3rotx = 0.0f;
+float d3roty = 0.0f;
+float d3rotz = 0.0f;
+//Para dedo 4
+float d4rotx = 0.0f;
+float d4roty = 0.0f;
+float d4rotz = 0.0f;
+//Para dedo 5
+float d5rotx = 0.0f;
+float d5roty = 0.0f;
+
+// ***** ***** ***** ***** ***** ***** ***** ***** KEYFRAMES ***** ***** ***** ***** ***** ***** ***** ***** //
+
+//Keyframes Dedos
+float posX = 0, posY = 0.0, posZ = 0.0, Dedo1 = 0.0, Dedo2 = 0.0, Dedo3 = 0.0, Dedo4 = 0.0, Dedo5 = 0.0;
+#define MAX_FRAMES 5	//Numero de veces que se puede guardar
+int i_max_steps = 90;	//Velocidad Max
+int i_curr_steps = 0;	//Velocidad min
+
+typedef struct _frame
+{
+	//Variables para GUARDAR Key Frames
+	float posX;		//Variable para PosicionX
+	float posY;		//Variable para PosicionY
+	float posZ;		//Variable para PosicionZ
+	float incX;		//Variable para IncrementoX
+	float incY;		//Variable para IncrementoY
+	float incZ;		//Variable para IncrementoZ
+	float Dedo1;
+	float Dedo2;
+	float Dedo3;
+	float Dedo4;
+	float Dedo5;
+	float IncD1;
+	float IncD2;
+	float IncD3;
+	float IncD4;
+	float IncD5;
+}FRAME;
+
+FRAME KeyFrame[MAX_FRAMES];
+int FrameIndex = 0;			//introducir datos
+bool play = false;
+int playIndex = 0;
+
+int w = 500, h = 500;
+int frame = 0, time, timebase = 0;
+char s[30];
+
+void saveFrame(void)
+{
+	printf("frameindex %d\n", FrameIndex);
+	KeyFrame[FrameIndex].posX = posX;
+	KeyFrame[FrameIndex].posY = posY;
+	KeyFrame[FrameIndex].posZ = posZ;
+
+	KeyFrame[FrameIndex].Dedo1 = Dedo1;
+	KeyFrame[FrameIndex].Dedo2 = Dedo2;
+	KeyFrame[FrameIndex].Dedo3 = Dedo3;
+	KeyFrame[FrameIndex].Dedo4 = Dedo4;
+	KeyFrame[FrameIndex].Dedo5 = Dedo5;
+
+	FrameIndex++;
+}
+
+void resetElements(void)
+{
+	posX = KeyFrame[0].posX;
+	posY = KeyFrame[0].posY;
+	posZ = KeyFrame[0].posZ;
+
+	Dedo1 = KeyFrame[0].Dedo1;
+	Dedo2 = KeyFrame[0].Dedo2;
+	Dedo3 = KeyFrame[0].Dedo3;
+	Dedo4 = KeyFrame[0].Dedo4;
+	Dedo5 = KeyFrame[0].Dedo5;
+}
+
+void interpolation(void)
+{
+	KeyFrame[playIndex].incX = (KeyFrame[playIndex + 1].posX - KeyFrame[playIndex].posX) / i_max_steps;
+	KeyFrame[playIndex].incY = (KeyFrame[playIndex + 1].posY - KeyFrame[playIndex].posY) / i_max_steps;
+	KeyFrame[playIndex].incZ = (KeyFrame[playIndex + 1].posZ - KeyFrame[playIndex].posZ) / i_max_steps;
+
+	KeyFrame[playIndex].IncD1 = (KeyFrame[playIndex + 1].Dedo1 - KeyFrame[playIndex].Dedo1) / i_max_steps;
+	KeyFrame[playIndex].IncD2 = (KeyFrame[playIndex + 1].Dedo2 - KeyFrame[playIndex].Dedo2) / i_max_steps;
+	KeyFrame[playIndex].IncD3 = (KeyFrame[playIndex + 1].Dedo3 - KeyFrame[playIndex].Dedo3) / i_max_steps;
+	KeyFrame[playIndex].IncD4 = (KeyFrame[playIndex + 1].Dedo4 - KeyFrame[playIndex].Dedo4) / i_max_steps;
+	KeyFrame[playIndex].IncD5 = (KeyFrame[playIndex + 1].Dedo5 - KeyFrame[playIndex].Dedo5) / i_max_steps;
+}
+
+// ***** ***** ***** ***** ***** ***** ***** ***** FIN KEYFRAMES ***** ***** ***** ***** ***** ***** ***** ***** //
+
+int screenW = 0.0;
+int screenH = 0.0;
+
+
+GLfloat Position[] = { 0.0f, 3.0f, 0.0f, 1.0f };			// Light Position
+GLfloat Position2[] = { 0.0f, 0.0f, -5.0f, 1.0f };			// Light Position
+
+void InitGL ( void )     // Inicializamos parametros
+{
+	glShadeModel(GL_SMOOTH);							// Habilitamos Smooth Shading
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);				// Negro de fondo
+	glClearDepth(1.0f);									// Configuramos Depth Buffer
+	glEnable(GL_DEPTH_TEST);							// Habilitamos Depth Testing
+	//Configuracion luz
+	/*glLightfv(GL_LIGHT0, GL_POSITION, Position);
+	glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, Position2);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);*/
+	glDepthFunc(GL_LEQUAL);								// Tipo de Depth Testing a realizar
+	glEnable ( GL_COLOR_MATERIAL );
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+// ***** ***** ***** ***** ***** ***** ***** ***** KEYFRAMES ***** ***** ***** ***** ***** ***** ***** ***** //
+	for (int i = 0; i<MAX_FRAMES; i++)
+	{
+		KeyFrame[i].posX = 0;
+		KeyFrame[i].posY = 0;
+		KeyFrame[i].posZ = 0;
+		KeyFrame[i].incX = 0;
+		KeyFrame[i].incY = 0;
+		KeyFrame[i].incZ = 0;
+		KeyFrame[i].Dedo1 = 0;
+		KeyFrame[i].Dedo2 = 0;
+		KeyFrame[i].Dedo3 = 0;
+		KeyFrame[i].Dedo4 = 0;
+		KeyFrame[i].Dedo5 = 0;
+		KeyFrame[i].IncD1 = 0;
+		KeyFrame[i].IncD2 = 0;
+		KeyFrame[i].IncD3 = 0;
+		KeyFrame[i].IncD4 = 0;
+		KeyFrame[i].IncD5 = 0;
+	}
+// ***** ***** ***** ***** ***** ***** ***** ***** FIN KEYFRAMES ***** ***** ***** ***** ***** ***** ***** ***** //
+
+}
+
+void prisma(void)
+{
+	GLfloat vertice [8][3] = {
+				{0.5 ,-0.5, 0.5},    //Coordenadas Vértice 0 V0
+				{-0.5 ,-0.5, 0.5},    //Coordenadas Vértice 1 V1
+				{-0.5 ,-0.5, -0.5},    //Coordenadas Vértice 2 V2
+				{0.5 ,-0.5, -0.5},    //Coordenadas Vértice 3 V3
+				{0.5 ,0.5, 0.5},    //Coordenadas Vértice 4 V4
+				{0.5 ,0.5, -0.5},    //Coordenadas Vértice 5 V5
+				{-0.5 ,0.5, -0.5},    //Coordenadas Vértice 6 V6
+				{-0.5 ,0.5, 0.5},    //Coordenadas Vértice 7 V7
+				};
+
+		glBegin(GL_POLYGON);	//Front
+			//glNormal3f( 0.0f, 0.0f, 1.0f);
+			glColor3f(1.0, 0.0, 0.0);
+			glVertex3fv(vertice[0]);
+			glVertex3fv(vertice[4]);
+			glVertex3fv(vertice[7]);
+			glVertex3fv(vertice[1]);
+		glEnd();
+
+		glBegin(GL_POLYGON);	//Right
+		glColor3f(0.0, 0.0, 1.0);
+			//glNormal3f( 1.0f, 0.0f, 0.0f);
+			glVertex3fv(vertice[0]);
+			glVertex3fv(vertice[3]);
+			glVertex3fv(vertice[5]);
+			glVertex3fv(vertice[4]);
+		glEnd();
+
+		glBegin(GL_POLYGON);	//Back
+		glColor3f(0.0, 1.0, 0.0);
+								//glNormal3f( 0.0f, 0.0f, -1.0f);
+			glVertex3fv(vertice[6]);
+			glVertex3fv(vertice[5]);
+			glVertex3fv(vertice[3]);
+			glVertex3fv(vertice[2]);
+		glEnd();
+
+		glBegin(GL_POLYGON);  //Left
+		glColor3f(1.0, 1.0, 1.0);
+							  //glNormal3f( -1.0f, 0.0f, 0.0f);
+			glVertex3fv(vertice[1]);
+			glVertex3fv(vertice[7]);
+			glVertex3fv(vertice[6]);
+			glVertex3fv(vertice[2]);
+		glEnd();
+
+		glBegin(GL_POLYGON);  //Bottom
+		glColor3f(0.4, 0.2, 0.6);
+							  //glNormal3f( 0.0f, -1.0f, 0.0f);
+			glVertex3fv(vertice[0]);
+			glVertex3fv(vertice[1]);
+			glVertex3fv(vertice[2]);
+			glVertex3fv(vertice[3]);
+		glEnd();
+
+		glBegin(GL_POLYGON);  //Top
+		glColor3f(0.8, 0.2, 0.4);
+							  //glNormal3f( 0.0f, 1.0f, 0.0f);
+			glVertex3fv(vertice[4]);
+			glVertex3fv(vertice[5]);
+			glVertex3fv(vertice[6]);
+			glVertex3fv(vertice[7]);
+		glEnd();
+}
+
+void display ( void )   // Creamos la funcion donde se dibuja
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Limiamos pantalla y Depth Buffer
+	//glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	// Palma 
+	glPushMatrix(); // stack palma
+	glTranslatef(-2.0f, 0.0f, transZ); // Traslación para la palma
+	
+	// ********** Ejercicio a casa 5 ********** // (1)
+
+	glRotatef(90, 0, 0, 1);			//Para girar la mano
+	glRotatef(180, 1, 0, 0);		//Para voltear la palma
+
+	// ********** Practica 5 ********** //
+
+	//Nudillo 1
+	glPushMatrix(); // stack nudillo 1
+	glTranslatef(1.5f, 1.5f, 0.0f); // Traslación para el nudillo 1
+	glRotatef(d1rotx + Dedo1, 0, 0, 1);
+		//Falange 1
+		glPushMatrix(); //stack Falange 1
+		glTranslatef(1.0f, 0.0f, 0.0f);
+		//Articulacion 1.1
+		glPushMatrix(); // stack articulacion 1.1
+		glTranslatef(1.0f, 0.0f, 0.0f); // Traslación para la articulacion 1.1
+		glRotatef(d1roty, 0, 0, 1);
+			//Falangina 1
+			glPushMatrix();//stack falangina 1
+			glTranslatef(1.0f, 0.0f, 0.0f);
+			//Articulacion 1.2
+			glPushMatrix(); // stack articulacion 1.2
+			glTranslatef(1.0f, 0.0f, 0.0f); // Traslación para la articulacion 1.2
+			glRotatef(d1rotz, 0, 0, 1);
+				//Falangeta 1
+				glPushMatrix();// stack falangeta 1
+				glTranslatef(1.0, 0.0f, 0.0f);
+					glScalef(2.0, 0.5, 2.0);
+					glRotatef(90, 1, 0, 0);
+					prisma();
+				glPopMatrix(); // Sale del stack de la falagenta 1
+				glPopMatrix(); // Sale del stack de la articulacion 1.2
+				glScalef(2.0, 0.75, 2.0);
+				glRotatef(90, 1, 0, 0);
+				prisma();
+			glPopMatrix(); // Sale del stack de la falangina 1
+			glPopMatrix(); // Sale del stack de la articulacion 1.1
+			glScalef(2.0, 1.0, 2.0);
+			glRotatef(90, 1, 0, 0);
+			prisma();
+		glPopMatrix(); // Sale del stack de la falange 1
+	glPopMatrix(); // Sale del stack del nudillo 1
+
+	//Nudillo 2
+	glPushMatrix(); // stack nudillo 2
+	glTranslatef(1.5f, 0.50f, 0.0f); // Traslación para el nudillo 2
+	glRotatef(d2rotx + Dedo2, 0, 0, 1);
+		//Falange 2
+		glPushMatrix(); //stack Falange 2
+		glTranslatef(1.0f, 0.0f, 0.0f);
+		//Articulacion 2.1
+		glPushMatrix(); // stack articulacion 2.1
+		glTranslatef(1.0f, 0.0f, 0.0f); // Traslación para la articulacion 2.1
+		glRotatef(d2roty, 0, 0, 1);
+			//Falangina 2
+			glPushMatrix();//stack falangina 2
+			glTranslatef(1.0f, 0.0f, 0.0f);
+			//Articulacion 2.2
+			glPushMatrix(); // stack articulacion 2.2
+			glTranslatef(1.0f, 0.0f, 0.0f); // Traslación para la articulacion 2.2
+			glRotatef(d2rotz, 0, 0, 1);
+				//Falangeta 2
+				glPushMatrix();// stack falangeta 2
+				glTranslatef(1.0f, 0.0f, 0.0f);
+					glScalef(2.0, .5, 2.0);
+					glRotatef(180, 1, 0, 0);
+					prisma();
+					glPopMatrix(); // Sale del stack de la falagenta 2
+					glPopMatrix(); // Sale del stack de la articulacion 2.2
+				glScalef(2.0, .75, 2.0);
+				glRotatef(180, 1, 0, 0);
+				prisma();
+				glPopMatrix(); // Sale del stack de la falangina 2
+				glPopMatrix(); // Sale del stack de la articulacion 2.1
+			glScalef(2.0, 1.0, 2.0);
+			glRotatef(180, 1, 0, 0);
+			prisma();
+		glPopMatrix(); // Sale del stack de la falange 2
+	glPopMatrix(); // Sale del stack del nudillo 2
+
+	//Nudillo 3
+	glPushMatrix(); // stack nudillo 3
+	glTranslatef(1.5f, -0.50f, 0.0f); // Traslación para el nudillo 3
+	glRotatef(d3rotx + Dedo3, 0, 0, 1);
+		//Falange 3
+		glPushMatrix(); //stack Falange 3
+		glTranslatef(1.0f, 0.0f, 0.0f);
+		//Articulacion 3.1
+		glPushMatrix(); // stack articulacion 3.1
+		glTranslatef(1.0f, 0.0f, 0.0f); // Traslación para la articulacion 3.1
+		glRotatef(d3roty, 0, 0, 1);
+			//Falangina 3
+			glPushMatrix();//stack falangina 3
+			glTranslatef(1.0f, 0.0f, 0.0f);
+			//Articulacion 3.2
+			glPushMatrix(); // stack articulacion 3.2
+			glTranslatef(1.0f, 0.0f, 0.0f); // Traslación para la articulacion 3.2
+			glRotatef(d3rotz, 0, 0, 1);
+				//Falangeta 3
+				glPushMatrix();// stack falangeta 3
+				glTranslatef(1.0f, 0.0f, 0.0f);
+				glScalef(2.0, .5, 2.0);
+				glRotatef(270, 1, 0, 0);
+				prisma();
+				glPopMatrix(); // Sale del stack de la falagenta 3
+			glPopMatrix(); // Sale del stack de la articulacion 3.2
+			glScalef(2.0, .75, 2.0);
+			glRotatef(270, 1, 0, 0);
+			prisma();
+			glPopMatrix(); // Sale del stack de la falangina 3
+		glPopMatrix(); // Sale del stack de la articulacion 3.1
+		glScalef(2.0, 1.0, 2.0);
+		glRotatef(270, 1, 0, 0);
+		prisma();
+		glPopMatrix(); // Sale del stack de la falange 3
+	glPopMatrix(); // Sale del stack del nudillo 3
+
+	//Nudillo 4
+	glPushMatrix(); // stack nudillo 4
+	glTranslatef(1.5f, -1.5f, 0.0f); // Traslación para el nudillo 4
+	glRotatef(d4rotx + Dedo4, 0, 0, 1);
+		//Falange 4
+		glPushMatrix(); //stack Falange 4
+		glTranslatef(1.0f, 0.0f, 0.0f);
+		//Articulacion 4.1
+		glPushMatrix(); // stack articulacion 4.1
+		glTranslatef(1.0f, 0.0f, 0.0f); // Traslación para la articulacion 4.1
+		glRotatef(d4roty, 0, 0, 1);
+			//Falangina 4
+			glPushMatrix();//stack falangina 4
+			glTranslatef(1.0f, 0.0f, 0.0f);
+			//Articulacion 4.2
+			glPushMatrix(); // stack articulacion 4.2
+			glTranslatef(1.0f, 0.0f, 0.0f); // Traslación para la articulacion 4.2
+			glRotatef(d4rotz, 0, 0, 1);
+				//Falangeta 4
+				glPushMatrix();// stack falangeta 4
+				glTranslatef(1.0f, 0.0f, 0.0f);
+				glScalef(2.0, .5, 2.0);
+				glRotatef(90, 0, 1, 0);
+				prisma();
+				glPopMatrix(); // Sale del stack de la falagenta 4
+			glPopMatrix(); // Sale del stack de la articulacion 4.2
+			glScalef(2.0, .75, 2.0);
+			glRotatef(90, 0, 1, 0);
+			prisma();
+			glPopMatrix(); // Sale del stack de la falangina 4
+		glPopMatrix(); // Sale del stack de la articulacion 4.1
+		glScalef(2.0, 1.0, 2.0);
+		glRotatef(90, 0, 1, 0);
+		prisma();
+		glPopMatrix(); // Sale del stack de la falange 4
+	glPopMatrix(); // Sale del stack del nudillo 4
+
+   //Nudillo 5
+	glPushMatrix(); // stack nudillo 5
+	glTranslatef(-0.5f, 2.5f, 0.0f); // Traslación para el nudillo 5
+	glRotatef(d5rotx + Dedo5, 0, 0, 1);
+		//Falange 5
+		glPushMatrix(); //stack Falange 5
+		glTranslatef(0.0f, 0.75f, 0.0f);
+		//Articulacion 5.1
+		glPushMatrix(); // stack articulacion 5.1
+		glTranslatef(0.0f, 0.5f, 0.0f); // Traslación para la articulacion 5.1
+		glRotatef(d5roty, 0, 0, 1);
+			//Falangina 5
+			glPushMatrix();//stack falangina 5
+			glTranslatef(0.0f, 0.50f, 0.0f);
+			glScalef(0.75, 1.5, 2.0);
+			glRotatef(270, 0, 1, 0);
+			prisma();
+			glPopMatrix(); // Sale del stack de la falangina 5
+		glPopMatrix(); // Sale del stack de la articulacion 5.1
+		glScalef(1.0, 1.5, 2.0);
+		glRotatef(270, 0, 1, 0);
+		prisma();
+		glPopMatrix(); // Sale del stack de la falange 5
+	glPopMatrix(); // Sale del stack del nudillo 5
+
+	glScalef(3, 5, 1);
+	prisma();           // Dibujar palma
+	glPopMatrix(); // Sale del stack de la palma 
+
+	//			   //fin dibujo
+
+	
+	glutSwapBuffers ( );
+  // Swap The Buffers
+}
+
+// ***** ***** ***** ***** ***** ***** ***** ***** KEYFRAMES ***** ***** ***** ***** ***** ***** ***** ***** //
+void animacion()
+{
+	if (play)
+	{
+		if (i_curr_steps >= i_max_steps) 
+		{
+			playIndex++;
+			if (playIndex>FrameIndex - 2)
+			{
+				printf("termina anim\n");
+				playIndex = 0;
+				play = false;
+			}
+			else 
+			{
+				i_curr_steps = 0;
+				interpolation();
+			}
+		}
+		else
+		{
+			posX += KeyFrame[playIndex].incX;
+			posY += KeyFrame[playIndex].incY;
+			posZ += KeyFrame[playIndex].incZ;
+
+			Dedo1 += KeyFrame[playIndex].IncD1;
+			Dedo2 += KeyFrame[playIndex].IncD2;
+			Dedo3 += KeyFrame[playIndex].IncD3;
+			Dedo4 += KeyFrame[playIndex].IncD4;
+			Dedo5 += KeyFrame[playIndex].IncD5;
+
+			i_curr_steps++;
+		}
+	}
+	glutPostRedisplay();
+}
+
+void menuKeyFrame(int id)
+{
+	switch (id)
+	{
+	case 0:
+		if (FrameIndex<MAX_FRAMES)
+		{
+			saveFrame();
+		}
+		break;
+	case 1:
+		if (play == false && FrameIndex >1)
+		{
+			resetElements();
+			interpolation();
+			play = true;
+			playIndex = 0;
+			i_curr_steps = 0;
+		}
+		else
+		{
+			play = false;
+		}
+		break;
+	}
+}
+
+void menu(int id)
+{
+}
+// ***** ***** ***** ***** ***** ***** ***** ***** FIN KEYFRAMES ***** ***** ***** ***** ***** ***** ***** ***** //
+
+void reshape ( int width , int height )   // Creamos funcion Reshape
+{
+  if (height==0)										// Prevenir division entre cero
+	{
+		height=1;
+	}
+	glViewport(0,0,width,height);	
+	glMatrixMode(GL_PROJECTION);						// Seleccionamos Projection Matrix
+	glLoadIdentity();
+	// Tipo de Vista
+	//glOrtho(-5,5,-5,5,0.2,20);	
+	glFrustum (-0.1, 0.1,-0.1, 0.1, 0.1, 50.0);
+	glMatrixMode(GL_MODELVIEW);							// Seleccionamos Modelview Matrix
+	//glLoadIdentity();									
+}
+
+void keyboard ( unsigned char key, int x, int y )  // Create Keyboard Function
+{
+	switch ( key ) {
+		case 'w':
+		case 'W':
+			transZ +=0.2f;
+			break;
+		case 's':
+		case 'S':
+			transZ -=0.2f;
+			break;
+		case 'a':
+		case 'A':
+			transX +=0.2f;
+			break;
+		case 'd':
+		case 'D':
+			transX -=0.2f;
+			break;
+		case 'i':
+		case 'I':
+			d1rotx += 30.0f;
+			break;
+		case 'o':
+		case 'O':
+			d1roty += 30.0f;
+			break;
+		case 'p':
+		case 'P':
+			d1rotz += 30.0f;
+			break;
+		case 'j':
+		case 'J':
+			d2rotx += 30.0f;
+			break;
+		case 'k':
+		case 'K':
+			d2roty += 30.0f;
+			break;
+		case 'l':
+		case 'L':
+			d2rotz += 30.0f;
+			break;
+		case 'b':
+		case 'B':
+			d3rotx += 30.0f;
+			break;
+		case 'n':
+		case 'N':
+			d3roty += 30.0f;
+			break;
+		case 'm':
+		case 'M':
+			d3rotz += 30.0f;
+			break;
+		case 't':
+		case 'T':
+			d4rotx += 30.0f;
+			break;
+		case 'y':
+		case 'Y':
+			d4roty += 30.0f;
+			break;
+		case 'u':
+		case 'U':
+			d4rotz += 30.0f;
+			break;
+		case 'g':
+		case 'G':
+			d5rotx += 30.0f;
+			break;
+		case 'h':
+		case 'H':
+			d5roty += 30.0f;
+			break;
+// ***** ***** ***** ***** ***** ***** ***** ***** KEYFRAMES ***** ***** ***** ***** ***** ***** ***** ***** //
+
+		case 'z':
+			if (FrameIndex<MAX_FRAMES)
+			{
+				saveFrame();
+			}
+			break;
+		case 'Z':
+			if (play == false && (FrameIndex>1))
+			{
+				resetElements();				
+				interpolation();
+				play = true;
+				playIndex = 0;
+				i_curr_steps = 0;
+			}
+			else
+			{
+				play = false;
+			}
+			break;
+		case '0':
+			Dedo1++;
+			break;
+		case '1':
+			Dedo1--;
+			break;
+		case '2':
+			Dedo2++;
+			break;
+		case '3':
+			Dedo2--;
+			break;
+		case '4':
+			Dedo3++;
+			break;
+		case '5':
+			Dedo3--;
+			break;
+		case '6':
+			Dedo4++;
+			break;
+		case '7':
+			Dedo4--;
+			break;
+		case '8':
+			Dedo5++;
+			break;
+		case '9':
+			Dedo5--;
+			break;
+// ***** ***** ***** ***** ***** ***** ***** ***** FIN KEYFRAMES ***** ***** ***** ***** ***** ***** ***** ***** //
+		case 27:        // Cuando Esc es presionado...
+			exit ( 0 );   // Salimos del programa
+		break;        
+		default:        // Cualquier otra
+		break;
+  }
+	glutPostRedisplay();
+}
+
+void arrow_keys ( int a_keys, int x, int y )  // Funcion para manejo de teclas especiales (arrow keys)
+{
+  switch ( a_keys ) {
+    case GLUT_KEY_UP:		// Presionamos tecla ARRIBA...
+		AnguloX +=2.0f;
+		break;
+    case GLUT_KEY_DOWN:		// Presionamos tecla ABAJO...
+		AnguloX -=2.0f;
+		break;
+	case GLUT_KEY_LEFT:
+		AnguloY +=2.0f;
+		break;
+	case GLUT_KEY_RIGHT:
+		AnguloY -=2.0f;
+		break;
+    default:
+      break;
+  }
+  glutPostRedisplay();
+}
+
+int main ( int argc, char** argv )   // Main Function
+{
+  glutInit            (&argc, argv); // Inicializamos OpenGL
+  glutInitDisplayMode (GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH); // Display Mode (Clores RGB y alpha | Buffer Doble )
+  screenW = glutGet(GLUT_SCREEN_WIDTH);
+  screenH = glutGet(GLUT_SCREEN_HEIGHT);
+  glutInitWindowSize  (500, 500);	// Tamaño de la Ventana
+  glutInitWindowPosition (0, 0);	//Posicion de la Ventana
+  glutCreateWindow	("Ejercicio_A_Casa_11"); // Nombre de la Ventana
+  printf("Resolution H: %i \n", screenW);
+  printf("Resolution V: %i \n", screenH);
+  InitGL ();						// Parametros iniciales de la aplicacion
+  glutDisplayFunc     ( display );  //Indicamos a Glut función de dibujo
+  glutReshapeFunc     ( reshape );	//Indicamos a Glut función en caso de cambio de tamano
+  glutKeyboardFunc    ( keyboard );	//Indicamos a Glut función de manejo de teclado
+  glutSpecialFunc     ( arrow_keys );	//Otras
+  glutMainLoop        ( );          // 
+  // ***** ***** ***** Menu ***** ***** ***** //
+  int submenu;
+  submenu = glutCreateMenu(menuKeyFrame);
+  glutAddMenuEntry("Guardar KeyFrame", 0);
+  glutAddMenuEntry("Reproducir Animacion", 1);
+  glutCreateMenu(menu);
+  glutAddSubMenu("Animacion Monito", submenu);
+
+  glutAttachMenu(GLUT_RIGHT_BUTTON);
+  // ***** ***** ***** ***** ***** ***** ***** //
+  return 0;
+}
